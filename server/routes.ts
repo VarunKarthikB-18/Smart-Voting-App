@@ -7,9 +7,7 @@ import { setupAuth, ensureAuthenticated } from './auth';
 
 // Middleware to ensure the user is an admin
 function ensureAdmin(req: Request, res: Response, next: NextFunction) {
-  // Temporarily allow all authenticated users to be admin
-  // until we implement proper role management
-  if (req.isAuthenticated() && req.user) {
+  if (req.isAuthenticated() && req.user && req.user.role === "admin") {
     return next();
   }
   res.status(403).json({ message: "Admin access required" });
@@ -100,8 +98,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         username: user.username,
         hasVoted: user.hasVoted,
-        votedFor: user.votedFor
-        // role omitted until we implement it in the database
+        votedFor: user.votedFor,
+        role: user.role
       }));
       
       res.json(voters);
