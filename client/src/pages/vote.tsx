@@ -8,6 +8,7 @@ import { FaceRecognition } from '@/components/face-recognition';
 import { fetchCandidates, castVote, hasVoted, markAsVoted, getVotedCandidate } from '@/lib/api';
 import { AlertCircleIcon, CheckCircleIcon, ScanFaceIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function VotePage() {
   const { toast } = useToast();
@@ -19,8 +20,14 @@ export default function VotePage() {
   const [showFaceVerification, setShowFaceVerification] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
   
-  const userHasVoted = hasVoted();
-  const userVotedFor = getVotedCandidate();
+  // Get auth context for user data
+  const { user } = useAuth();
+  
+  // Check if user has voted - prefer server data over localStorage
+  const userHasVoted = user?.hasVoted || hasVoted();
+  
+  // Get the candidate the user voted for - prefer server data over localStorage
+  const userVotedFor = user?.votedFor || getVotedCandidate();
   
   // Fetch candidates
   const { data: candidates, isLoading } = useQuery({
@@ -32,10 +39,11 @@ export default function VotePage() {
   const voteMutation = useMutation({
     mutationFn: (candidateId: number) => castVote(candidateId),
     onSuccess: (data, candidateId) => {
-      // Update cache
+      // Update cache for both results and user data
       queryClient.invalidateQueries({ queryKey: ['/api/results'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       
-      // Mark as voted in localStorage
+      // Mark as voted in localStorage as backup
       markAsVoted(candidateId);
       
       // Show success message

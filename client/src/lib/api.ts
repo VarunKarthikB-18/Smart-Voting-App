@@ -26,6 +26,7 @@ export async function castVote(candidateId: number): Promise<{ message: string; 
 }
 
 // Check if the user has already voted
+// This function is used as a fallback when the user context is not available
 export function hasVoted(): boolean {
   return localStorage.getItem('hasVoted') === 'true';
 }
