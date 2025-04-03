@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Toaster } from "@/components/ui/toaster";
 import { CheckSquare } from "lucide-react";
 import { Tab } from '@/lib/types';
 
@@ -41,38 +40,35 @@ export function Layout({ children }: LayoutProps) {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8" aria-label="Tabs">
-            <Link href="/">
-              <a 
-                className={`px-1 py-4 text-sm font-medium border-b-2 ${
-                  activeTab === 'voting' 
-                    ? 'border-primary text-primary' 
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Vote
-              </a>
+            <Link 
+              href="/"
+              className={`px-1 py-4 text-sm font-medium border-b-2 ${
+                activeTab === 'voting' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Vote
             </Link>
-            <Link href="/results">
-              <a 
-                className={`px-1 py-4 text-sm font-medium border-b-2 ${
-                  activeTab === 'results' 
-                    ? 'border-primary text-primary' 
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Results
-              </a>
+            <Link 
+              href="/results"
+              className={`px-1 py-4 text-sm font-medium border-b-2 ${
+                activeTab === 'results' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Results
             </Link>
-            <Link href="/info">
-              <a 
-                className={`px-1 py-4 text-sm font-medium border-b-2 ${
-                  activeTab === 'info' 
-                    ? 'border-primary text-primary' 
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Election Info
-              </a>
+            <Link 
+              href="/info"
+              className={`px-1 py-4 text-sm font-medium border-b-2 ${
+                activeTab === 'info' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Election Info
             </Link>
           </nav>
         </div>
@@ -98,8 +94,6 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </footer>
-
-      <Toaster />
     </div>
   );
 }
