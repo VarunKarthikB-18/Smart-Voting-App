@@ -1,10 +1,10 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { users, candidates, votes, sessions } from "@shared/schema";
 
 // Create a database connection
-const sql = neon(process.env.DATABASE_URL!);
-export const db = drizzle(sql, { schema: { users, candidates, votes, sessions } });
+const client = postgres(process.env.DATABASE_URL!);
+export const db = drizzle(client, { schema: { users, candidates, votes, sessions } });
 
 // Initialize the database with default candidates if needed
 export async function initializeDatabase() {

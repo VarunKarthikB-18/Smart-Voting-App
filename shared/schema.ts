@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   votedFor: integer("voted_for").references(() => candidates.id),
   faceData: jsonb("face_data"),
   faceRegistered: boolean("face_registered").default(false).notNull(),
+  role: text("role").default("voter").notNull(), // "voter" or "admin"
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

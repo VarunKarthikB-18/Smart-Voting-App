@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CheckSquare } from "lucide-react";
 import { Tab } from '@/lib/types';
+import { useAuth } from '@/hooks/use-auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,13 +10,18 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location, setLocation] = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  
   const activeTab: Tab = location === "/" 
     ? "voting" 
     : location === "/results" 
       ? "results" 
       : location === "/info" 
         ? "info" 
-        : "voting";
+        : location === "/admin"
+          ? "admin"
+          : "voting";
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -70,6 +76,19 @@ export function Layout({ children }: LayoutProps) {
             >
               Election Info
             </Link>
+            
+            {isAdmin && (
+              <Link 
+                href="/admin"
+                className={`px-1 py-4 text-sm font-medium border-b-2 ${
+                  activeTab === 'admin' 
+                    ? 'border-primary text-primary' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Admin
+              </Link>
+            )}
           </nav>
         </div>
       </div>

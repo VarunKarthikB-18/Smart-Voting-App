@@ -7,6 +7,7 @@ import ResultsPage from "@/pages/results";
 import InfoPage from "@/pages/info";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
+import AdminPage from "@/pages/admin-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { Toaster } from "@/components/ui/toaster";
@@ -28,6 +29,13 @@ function Router() {
       <ProtectedRoute path="/info" component={() => (
         <Layout>
           <InfoPage />
+        </Layout>
+      )} />
+      
+      {/* Admin route */}
+      <ProtectedRoute path="/admin" component={() => (
+        <Layout>
+          <AdminPage />
         </Layout>
       )} />
       

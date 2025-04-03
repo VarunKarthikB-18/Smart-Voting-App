@@ -1,9 +1,17 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertVoteSchema } from "@shared/schema";
+import { insertVoteSchema, insertCandidateSchema, User } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, ensureAuthenticated } from './auth';
+
+// Middleware to ensure the user is an admin
+function ensureAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.isAuthenticated() && req.user && req.user.role === "admin") {
+    return next();
+  }
+  res.status(403).json({ message: "Admin access required" });
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication with passport
@@ -72,6 +80,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Failed to cast vote" });
       }
+    }
+  });
+
+  // ======= ADMIN ROUTES =======
+  
+  // Get all voters (admin only)
+  app.get("/api/admin/voters", ensureAuthenticated, ensureAdmin, async (req: Request, res: Response) => {
+    try {
+      // This assumes you've added a method to get all users
+      const users = await storage.getAllUsers();
+      
+      // Filter out sensitive information
+      const voters = users.map((user: User) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        hasVoted: user.hasVoted,
+        votedFor: user.votedFor,
+        role: user.role
+      }));
+      
+      res.json(voters);
+    } catch (error) {
+      console.error("Error fetching voters:", error);
+      res.status(500).json({ message: "Failed to fetch voters" });
+    }
+  });
+
+  // Create a new candidate (admin only)
+  app.post("/api/admin/candidates", ensureAuthenticated, ensureAdmin, async (req: Request, res: Response) => {
+    try {
+      // Validate the candidate data
+      const validatedData = insertCandidateSchema.parse(req.body);
+      
+      // Create the candidate
+      const candidate = await storage.createCandidate(validatedData);
+      
+      res.status(201).json(candidate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid candidate data", errors: error.errors });
+      } else if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Failed to create candidate" });
+      }
+    }
+  });
+
+  // Update a candidate (admin only)
+  app.put("/api/admin/candidates/:id", ensureAuthenticated, ensureAdmin, async (req: Request, res: Response) => {
+    try {
+      const candidateId = parseInt(req.params.id);
+      
+      // Validate the candidate data
+      const validatedData = insertCandidateSchema.parse(req.body);
+      
+      // Check if candidate exists
+      const candidate = await storage.getCandidate(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+      
+      // Update the candidate
+      const updatedCandidate = await storage.updateCandidate(candidateId, validatedData);
+      
+      res.json(updatedCandidate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid candidate data", errors: error.errors });
+      } else if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Failed to update candidate" });
+      }
+    }
+  });
+
+  // Delete a candidate (admin only)
+  app.delete("/api/admin/candidates/:id", ensureAuthenticated, ensureAdmin, async (req: Request, res: Response) => {
+    try {
+      const candidateId = parseInt(req.params.id);
+      
+      // Check if candidate exists
+      const candidate = await storage.getCandidate(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+      
+      // Delete the candidate
+      await storage.deleteCandidate(candidateId);
+      
+      res.json({ message: "Candidate deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting candidate:", error);
+      res.status(500).json({ message: "Failed to delete candidate" });
     }
   });
 

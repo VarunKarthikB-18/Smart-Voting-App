@@ -1,16 +1,10 @@
 import { InsertUser, User, InsertCandidate, Candidate, InsertVote, Vote, InsertSession, Session, ElectionSummary, VoteResult } from "@shared/schema";
 import { db } from "./db";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql as sqlExpr } from "drizzle-orm";
 import { users, candidates, votes, sessions } from "@shared/schema";
 import { IStorage } from "./storage";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { Pool } from "pg";
-
-// Create a new PostgreSQL connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
 
 // Create a PostgreSQL session store
 const PostgresSessionStore = connectPg(session);
@@ -20,9 +14,11 @@ export class PgStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Initialize the session store with the connection pool
+    // Initialize the session store with a pg connection
     this.sessionStore = new PostgresSessionStore({ 
-      pool, 
+      conObject: {
+        connectionString: process.env.DATABASE_URL,
+      },
       tableName: 'session',  // Use the default table name
       createTableIfMissing: true 
     });
@@ -45,8 +41,23 @@ export class PgStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    // Add default values
+    const userWithDefaults = {
+      ...insertUser,
+      hasVoted: false,
+      votedFor: null,
+      faceData: null,
+      faceRegistered: false,
+      role: "voter" // Set default role to voter
+    };
+    
+    const [user] = await db.insert(users).values(userWithDefaults).returning();
     return user;
+  }
+  
+  // Get all users (for admin functionality)
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
   }
 
   async updateUserVote(userId: number, candidateId: number): Promise<User> {
@@ -118,6 +129,46 @@ export class PgStorage implements IStorage {
     const [candidate] = await db.insert(candidates).values(insertCandidate).returning();
     return candidate;
   }
+  
+  // Update a candidate (for admin functionality)
+  async updateCandidate(id: number, candidateData: InsertCandidate): Promise<Candidate> {
+    const [updatedCandidate] = await db
+      .update(candidates)
+      .set(candidateData)
+      .where(eq(candidates.id, id))
+      .returning();
+      
+    if (!updatedCandidate) {
+      throw new Error("Candidate not found");
+    }
+    
+    return updatedCandidate;
+  }
+  
+  // Delete a candidate (for admin functionality)
+  async deleteCandidate(id: number): Promise<void> {
+    // Delete votes related to this candidate first
+    await db.transaction(async (tx) => {
+      await tx.delete(votes).where(eq(votes.candidateId, id));
+      
+      // Reset votedFor field for users who voted for this candidate
+      await tx
+        .update(users)
+        .set({ 
+          votedFor: null,
+          // Don't reset hasVoted - users have still participated, even if 
+          // their candidate is removed
+        })
+        .where(eq(users.votedFor, id));
+      
+      // Delete the candidate
+      const result = await tx.delete(candidates).where(eq(candidates.id, id)).returning();
+      
+      if (result.length === 0) {
+        throw new Error("Candidate not found");
+      }
+    });
+  }
 
   // Vote operations
   async castVote(insertVote: InsertVote, userId?: number): Promise<Vote> {
@@ -154,7 +205,7 @@ export class PgStorage implements IStorage {
 
   async getVotesForCandidate(candidateId: number): Promise<number> {
     const result = await db
-      .select({ count: sql<number>`cast(count(*) as int)` })
+      .select({ count: sqlExpr<number>`cast(count(*) as int)` })
       .from(votes)
       .where(eq(votes.candidateId, candidateId));
     return result[0]?.count || 0;
@@ -166,7 +217,7 @@ export class PgStorage implements IStorage {
     
     // Get total votes
     const totalVotesResult = await db
-      .select({ count: sql<number>`cast(count(*) as int)` })
+      .select({ count: sqlExpr<number>`cast(count(*) as int)` })
       .from(votes);
     const totalVotes = totalVotesResult[0]?.count || 0;
     

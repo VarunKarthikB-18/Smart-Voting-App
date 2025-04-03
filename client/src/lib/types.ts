@@ -19,4 +19,4 @@ export interface ElectionResults {
   leadingCandidate?: VoteResult;
 }
 
-export type Tab = 'voting' | 'results' | 'info';
+export type Tab = 'voting' | 'results' | 'info' | 'admin';

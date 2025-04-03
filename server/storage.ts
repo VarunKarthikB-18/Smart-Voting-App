@@ -27,6 +27,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserVote(userId: number, candidateId: number): Promise<User>;
   hasUserVoted(userId: number): Promise<boolean>;
+  getAllUsers(): Promise<User[]>; // Added for admin functionality
   
   // Face recognition operations
   saveFaceData?(userId: number, faceData: any): Promise<User>;
@@ -42,6 +43,8 @@ export interface IStorage {
   getCandidates(): Promise<Candidate[]>;
   getCandidate(id: number): Promise<Candidate | undefined>;
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
+  updateCandidate(id: number, candidate: InsertCandidate): Promise<Candidate>; // Added for admin functionality
+  deleteCandidate(id: number): Promise<void>; // Added for admin functionality
   
   // Vote operations
   castVote(vote: InsertVote, userId?: number): Promise<Vote>;
@@ -138,10 +141,16 @@ export class MemStorage implements IStorage {
       votedFor: null,
       faceData: null,
       faceRegistered: false,
+      role: "voter", // Set default role to voter
       createdAt: now
     };
     this.users.set(id, user);
     return user;
+  }
+  
+  // Get all users (for admin functionality)
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
   }
   
   async updateUserVote(userId: number, candidateId: number): Promise<User> {
@@ -246,6 +255,45 @@ export class MemStorage implements IStorage {
     return candidate;
   }
   
+  // Update a candidate (for admin functionality)
+  async updateCandidate(id: number, candidateData: InsertCandidate): Promise<Candidate> {
+    const candidate = await this.getCandidate(id);
+    if (!candidate) {
+      throw new Error("Candidate not found");
+    }
+    
+    const updatedCandidate: Candidate = {
+      ...candidate,
+      ...candidateData,
+    };
+    
+    this.candidates.set(id, updatedCandidate);
+    return updatedCandidate;
+  }
+  
+  // Delete a candidate (for admin functionality)
+  async deleteCandidate(id: number): Promise<void> {
+    const candidate = await this.getCandidate(id);
+    if (!candidate) {
+      throw new Error("Candidate not found");
+    }
+    
+    // Delete the candidate
+    this.candidates.delete(id);
+    
+    // Delete all votes for this candidate
+    const votesToDelete: number[] = [];
+    this.votes.forEach((vote, voteId) => {
+      if (vote.candidateId === id) {
+        votesToDelete.push(voteId);
+      }
+    });
+    
+    votesToDelete.forEach(voteId => {
+      this.votes.delete(voteId);
+    });
+  }
+  
   // Vote operations
   async castVote(insertVote: InsertVote, userId?: number): Promise<Vote> {
     const id = this.voteId++;
@@ -323,4 +371,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Import PgStorage implementation
+import { PgStorage } from './pg-storage';
+
+// Use PostgreSQL storage instead of in-memory storage
+export const storage = new PgStorage();
