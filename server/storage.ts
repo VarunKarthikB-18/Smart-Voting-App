@@ -2,24 +2,41 @@ import {
   users, 
   candidates, 
   votes, 
+  sessions,
   type User, 
   type InsertUser, 
   type Candidate, 
   type InsertCandidate,
   type Vote,
   type InsertVote,
+  type Session,
+  type InsertSession,
   type VoteResult,
   type ElectionSummary
 } from "@shared/schema";
+import session from 'express-session';
 
 // Interface for storage operations
 export interface IStorage {
+  // Session store for express-session
+  sessionStore?: session.Store;
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail?(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserVote(userId: number, candidateId: number): Promise<User>;
   hasUserVoted(userId: number): Promise<boolean>;
+  
+  // Face recognition operations
+  saveFaceData?(userId: number, faceData: any): Promise<User>;
+  getFaceData?(userId: number): Promise<any>;
+  isUserFaceRegistered?(userId: number): Promise<boolean>;
+  
+  // Session operations
+  createSession?(insertSession: InsertSession): Promise<Session>;
+  getSessionByToken?(token: string): Promise<Session | undefined>;
+  deleteSession?(token: string): Promise<void>;
   
   // Candidate operations
   getCandidates(): Promise<Candidate[]>;
@@ -32,17 +49,23 @@ export interface IStorage {
   getElectionResults(): Promise<ElectionSummary>;
 }
 
+// Import memory store
+import createMemoryStore from 'memorystore';
+
 // In-memory storage implementation
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private candidates: Map<number, Candidate>;
   private votes: Map<number, Vote>;
   
+  sessionStore: session.Store;
+  
   private userId: number;
   private candidateId: number;
   private voteId: number;
   
   constructor() {
+    // Initialize in-memory data stores
     this.users = new Map();
     this.candidates = new Map();
     this.votes = new Map();
@@ -50,6 +73,12 @@ export class MemStorage implements IStorage {
     this.userId = 1;
     this.candidateId = 1;
     this.voteId = 1;
+    
+    // Create memory store for sessions
+    const MemoryStore = createMemoryStore(session);
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
     
     // Initialize with default candidates
     this.initializeCandidates();
@@ -101,11 +130,15 @@ export class MemStorage implements IStorage {
   
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userId++;
+    const now = new Date();
     const user: User = { 
       ...insertUser, 
       id, 
       hasVoted: false,
-      votedFor: null
+      votedFor: null,
+      faceData: null,
+      faceRegistered: false,
+      createdAt: now
     };
     this.users.set(id, user);
     return user;
@@ -132,6 +165,71 @@ export class MemStorage implements IStorage {
     return user ? user.hasVoted : false;
   }
   
+  // Face recognition operations
+  async saveFaceData(userId: number, faceData: any): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const updatedUser: User = {
+      ...user,
+      faceData,
+      faceRegistered: true
+    };
+    
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+  
+  async getFaceData(userId: number): Promise<any> {
+    const user = await this.getUser(userId);
+    return user?.faceData;
+  }
+  
+  async isUserFaceRegistered(userId: number): Promise<boolean> {
+    const user = await this.getUser(userId);
+    // Since faceRegistered is notNull in schema, we can safely return the value or false if user not found
+    return user?.faceRegistered ?? false;
+  }
+  
+  // Session operations
+  async createSession(insertSession: InsertSession): Promise<Session> {
+    const id = Math.floor(Math.random() * 1000000);
+    const session: Session = {
+      ...insertSession,
+      id,
+      createdAt: new Date()
+    };
+    
+    // In memory, we don't actually store sessions
+    return session;
+  }
+  
+  async getSessionByToken(token: string): Promise<Session | undefined> {
+    // In memory, we don't actually verify sessions
+    // Just return a dummy valid session
+    return {
+      id: 1,
+      userId: 1,
+      token,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h in the future
+    };
+  }
+  
+  async deleteSession(token: string): Promise<void> {
+    // In memory, we don't actually delete sessions
+    return;
+  }
+  
+  // Email-based user lookup
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      user => user.email === email
+    );
+  }
+  
   // Candidate operations
   async getCandidates(): Promise<Candidate[]> {
     return Array.from(this.candidates.values());
@@ -155,7 +253,7 @@ export class MemStorage implements IStorage {
       ...insertVote,
       id,
       userId: userId || null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date()
     };
     
     // Check if candidate exists

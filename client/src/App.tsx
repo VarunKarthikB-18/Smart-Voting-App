@@ -6,24 +6,45 @@ import VotePage from "@/pages/vote";
 import ResultsPage from "@/pages/results";
 import InfoPage from "@/pages/info";
 import NotFound from "@/pages/not-found";
+import AuthPage from "@/pages/auth-page";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
+import { Toaster } from "@/components/ui/toaster";
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={VotePage} />
-        <Route path="/results" component={ResultsPage} />
-        <Route path="/info" component={InfoPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      {/* Protected routes that require login */}
+      <ProtectedRoute path="/" component={() => (
+        <Layout>
+          <VotePage />
+        </Layout>
+      )} />
+      <ProtectedRoute path="/results" component={() => (
+        <Layout>
+          <ResultsPage />
+        </Layout>
+      )} />
+      <ProtectedRoute path="/info" component={() => (
+        <Layout>
+          <InfoPage />
+        </Layout>
+      )} />
+      
+      {/* Public routes */}
+      <Route path="/auth" component={AuthPage} />
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

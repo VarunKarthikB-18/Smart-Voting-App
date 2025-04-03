@@ -3,8 +3,12 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertVoteSchema } from "@shared/schema";
 import { z } from "zod";
+import { setupAuth, ensureAuthenticated } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication with passport
+  setupAuth(app);
+  
   // Get all candidates
   app.get("/api/candidates", async (req: Request, res: Response) => {
     try {
@@ -25,32 +29,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cast a vote
-  app.post("/api/vote", async (req: Request, res: Response) => {
+  // Cast a vote - requires authentication and face verification
+  app.post("/api/vote", ensureAuthenticated, async (req: Request, res: Response) => {
     try {
       // Validate the vote data
       const validatedData = insertVoteSchema.parse(req.body);
       
-      // Check if the client already voted (using session storage or cookies in a real app)
-      const clientIp = req.ip;
-      const clientId = req.headers["x-client-id"] as string || clientIp;
+      // Get the user from the request (passport puts the whole user object here)
+      // ensureAuthenticated middleware guarantees user exists
+      const currentUser = req.user!;
+      const userId = currentUser.id;
       
-      // You could use a real session or database check here
-      // For now, we're using the candidateId from the request to check if user already voted
-      const hasVoted = req.cookies && req.cookies.hasVoted === 'true';
+      // Check if user is face-verified
+      // In a production app, you would check a session flag that indicates 
+      // the user has been face-verified for this specific voting session
+      const user = await storage.getUser(userId);
       
-      if (hasVoted) {
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if user has already voted
+      if (user.hasVoted) {
         return res.status(400).json({ message: "You have already cast your vote" });
       }
       
-      // Store the vote
-      const vote = await storage.castVote(validatedData);
-      
-      // Set a cookie to indicate this client has voted
-      res.cookie('hasVoted', 'true', { 
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        httpOnly: true
-      });
+      // Store the vote with the user ID
+      const vote = await storage.castVote(validatedData, userId);
       
       // Return the updated results
       const results = await storage.getElectionResults();

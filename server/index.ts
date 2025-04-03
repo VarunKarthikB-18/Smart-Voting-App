@@ -1,10 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import cookieParser from 'cookie-parser';
+import { initializeDatabase } from './db';
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '5mb' })); // Increased limit for face data
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -37,6 +40,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    // Initialize database before setting up routes
+    await initializeDatabase();
+    console.log('Database initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
