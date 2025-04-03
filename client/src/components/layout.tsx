@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { CheckSquare } from "lucide-react";
+import { CheckSquare, LogOut } from "lucide-react";
 import { Tab } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
+import { Button } from '@/components/ui/button';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,8 +11,14 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const isAdmin = user?.role === "admin";
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+    // Redirect to auth page after logout
+    setLocation('/auth');
+  };
   
   const activeTab: Tab = location === "/" 
     ? "voting" 
@@ -33,10 +40,23 @@ export function Layout({ children }: LayoutProps) {
               <CheckSquare className="text-primary h-6 w-6 mr-2" />
               <h1 className="text-xl font-bold text-gray-900">VoteEase</h1>
             </div>
-            <div className="hidden md:flex items-center text-sm text-gray-500">
-              <span>Presidential Election 2025</span>
-              <span className="mx-2">•</span>
-              <span>Voting ends on April 3, 2025</span>
+            <div className="flex items-center">
+              <div className="hidden md:flex items-center text-sm text-gray-500 mr-6">
+                <span>Presidential Election 2025</span>
+                <span className="mx-2">•</span>
+                <span>Voting ends on April 3, 2025</span>
+              </div>
+              {user && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="flex items-center"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              )}
             </div>
           </div>
         </div>

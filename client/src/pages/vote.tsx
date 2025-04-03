@@ -23,11 +23,12 @@ export default function VotePage() {
   // Get auth context for user data
   const { user } = useAuth();
   
-  // Check if user has voted - prefer server data over localStorage
-  const userHasVoted = user?.hasVoted || hasVoted();
+  // Check if user has voted - ONLY use server data
+  // This fixes an issue where localStorage might incorrectly show a user has voted
+  const userHasVoted = user ? user.hasVoted : false;
   
-  // Get the candidate the user voted for - prefer server data over localStorage
-  const userVotedFor = user?.votedFor || getVotedCandidate();
+  // Get the candidate the user voted for - ONLY use server data
+  const userVotedFor = user ? user.votedFor : null;
   
   // Fetch candidates
   const { data: candidates, isLoading } = useQuery({

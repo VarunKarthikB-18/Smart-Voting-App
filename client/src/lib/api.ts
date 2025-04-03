@@ -25,8 +25,11 @@ export async function castVote(candidateId: number): Promise<{ message: string; 
   return response.json();
 }
 
+// IMPORTANT: These localStorage methods are only used as a fallback
+// The primary source of truth is the server's user data
+// They should only be used when the server data is unavailable or as a temporary cache
+
 // Check if the user has already voted
-// This function is used as a fallback when the user context is not available
 export function hasVoted(): boolean {
   return localStorage.getItem('hasVoted') === 'true';
 }
@@ -41,4 +44,11 @@ export function markAsVoted(candidateId: number): void {
 export function getVotedCandidate(): number | null {
   const votedFor = localStorage.getItem('votedFor');
   return votedFor ? parseInt(votedFor, 10) : null;
+}
+
+// Clear all vote data from localStorage
+// Used during logout to prevent stale data
+export function clearVoteData(): void {
+  localStorage.removeItem('hasVoted');
+  localStorage.removeItem('votedFor');
 }

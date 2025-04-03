@@ -12,6 +12,7 @@ import {
 } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { clearVoteData } from "../lib/api";
 import { z } from "zod";
 
 // Registration schema with password confirmation
@@ -58,8 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       // Clear any previous voting data in localStorage
-      localStorage.removeItem('hasVoted');
-      localStorage.removeItem('votedFor');
+      clearVoteData();
       
       // Update global state
       queryClient.setQueryData(["/api/user"], user);
@@ -86,8 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       // Clear any previous voting data in localStorage
-      localStorage.removeItem('hasVoted');
-      localStorage.removeItem('votedFor');
+      clearVoteData();
       
       // Update global state
       queryClient.setQueryData(["/api/user"], user);
@@ -111,8 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       // Clear voting data in localStorage
-      localStorage.removeItem('hasVoted');
-      localStorage.removeItem('votedFor');
+      clearVoteData();
       
       // Update global state
       queryClient.setQueryData(["/api/user"], null);
