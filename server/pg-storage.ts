@@ -41,14 +41,14 @@ export class PgStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Add default values
+    // Add default values - temporarily remove role until we run the migration
     const userWithDefaults = {
       ...insertUser,
       hasVoted: false,
       votedFor: null,
       faceData: null,
       faceRegistered: false,
-      role: "voter" // Set default role to voter
+      // Don't set role explicitly, use the database default
     };
     
     const [user] = await db.insert(users).values(userWithDefaults).returning();
