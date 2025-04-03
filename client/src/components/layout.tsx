@@ -28,9 +28,9 @@ export function Layout({ children }: LayoutProps) {
               <h1 className="text-xl font-bold text-gray-900">VoteEase</h1>
             </div>
             <div className="hidden md:flex items-center text-sm text-gray-500">
-              <span>Presidential Election 2023</span>
+              <span>Presidential Election 2025</span>
               <span className="mx-2">•</span>
-              <span>Voting ends in 2h 45m</span>
+              <span>Voting ends on April 3, 2025</span>
             </div>
           </div>
         </div>

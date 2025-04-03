@@ -12,7 +12,7 @@ export default function InfoPage() {
       
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Presidential Election 2023</CardTitle>
+          <CardTitle>Presidential Election 2025</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -25,11 +25,11 @@ export default function InfoPage() {
                 </div>
                 <div className="flex">
                   <dt className="w-36 text-sm text-gray-500">Start Date:</dt>
-                  <dd className="flex-1 text-sm">October 10, 2023 - 8:00 AM</dd>
+                  <dd className="flex-1 text-sm">April 3, 2025 - 8:00 AM</dd>
                 </div>
                 <div className="flex">
                   <dt className="w-36 text-sm text-gray-500">End Date:</dt>
-                  <dd className="flex-1 text-sm">October 10, 2023 - 8:00 PM</dd>
+                  <dd className="flex-1 text-sm">April 3, 2025 - 8:00 PM</dd>
                 </div>
                 <div className="flex">
                   <dt className="w-36 text-sm text-gray-500">Eligible Voters:</dt>
@@ -46,10 +46,11 @@ export default function InfoPage() {
               <h4 className="font-medium text-gray-900 mb-2">Voting Rules</h4>
               <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
                 <li>One vote per registered voter</li>
-                <li>Voting requires verification</li>
+                <li>Facial recognition verification required</li>
                 <li>Votes cannot be changed after submission</li>
                 <li>Results are finalized after polls close</li>
                 <li>ID verification required at polling stations</li>
+                <li>Online and in-person voting available</li>
               </ul>
             </div>
           </div>
@@ -91,6 +92,18 @@ export default function InfoPage() {
                 <span className="text-primary font-semibold">3</span>
               </div>
               <div>
+                <h4 className="font-medium text-gray-900">Face Verification</h4>
+                <p className="text-sm text-gray-500">Complete facial recognition to confirm your identity</p>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="flex">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+                <span className="text-primary font-semibold">4</span>
+              </div>
+              <div>
                 <h4 className="font-medium text-gray-900">Confirm Your Selection</h4>
                 <p className="text-sm text-gray-500">Verify your choice and submit your final vote</p>
               </div>
@@ -100,7 +113,7 @@ export default function InfoPage() {
             
             <div className="flex">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-4">
-                <span className="text-primary font-semibold">4</span>
+                <span className="text-primary font-semibold">5</span>
               </div>
               <div>
                 <h4 className="font-medium text-gray-900">View Results</h4>
