@@ -28,6 +28,7 @@ export interface IStorage {
   updateUserVote(userId: number, candidateId: number): Promise<User>;
   hasUserVoted(userId: number): Promise<boolean>;
   getAllUsers(): Promise<User[]>; // Added for admin functionality
+  deleteUser(userId: number): Promise<void>; // Added for user management
   
   // Face recognition operations
   saveFaceData?(userId: number, faceData: any): Promise<User>;
@@ -151,6 +152,32 @@ export class MemStorage implements IStorage {
   // Get all users (for admin functionality)
   async getAllUsers(): Promise<User[]> {
     return Array.from(this.users.values());
+  }
+  
+  // Delete a user (for admin functionality)
+  async deleteUser(userId: number): Promise<void> {
+    // Check if user exists
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    // Delete the user
+    this.users.delete(userId);
+    
+    // If user has voted, remove their vote
+    if (user.hasVoted && user.votedFor !== null) {
+      const votesToDelete: number[] = [];
+      this.votes.forEach((vote, voteId) => {
+        if (vote.userId === userId) {
+          votesToDelete.push(voteId);
+        }
+      });
+      
+      votesToDelete.forEach(voteId => {
+        this.votes.delete(voteId);
+      });
+    }
   }
   
   async updateUserVote(userId: number, candidateId: number): Promise<User> {

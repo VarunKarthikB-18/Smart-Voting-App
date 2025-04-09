@@ -52,7 +52,6 @@ interface VoterData {
   username: string;
   hasVoted: boolean;
   votedFor: number | null;
-  faceRegistered: boolean;
   createdAt: string;
   role: string;
 }
@@ -156,6 +155,29 @@ export default function AdminPage() {
       });
     },
   });
+  
+  // Delete Voter Mutation
+  const deleteVoterMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User Deleted",
+        description: "The user has been deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/voters"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/results"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Candidate form
   const form = useForm<CandidateFormData>({
@@ -189,6 +211,13 @@ export default function AdminPage() {
       });
     } else {
       addCandidateMutation.mutate(data);
+    }
+  };
+  
+  // Handle voter deletion
+  const handleDeleteVoter = (userId: number) => {
+    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      deleteVoterMutation.mutate(userId);
     }
   };
 
@@ -422,7 +451,7 @@ export default function AdminPage() {
                         <TableHead>Registration Time</TableHead>
                         <TableHead>Voting Status</TableHead>
                         <TableHead>Voted For</TableHead>
-                        <TableHead>Face Registered</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -468,11 +497,17 @@ export default function AdminPage() {
                                 </div>
                               ) : '-'}
                             </TableCell>
-                            <TableCell>
-                              {voter.faceRegistered ? (
-                                <span className="text-green-600 dark:text-green-400">Yes</span>
-                              ) : (
-                                <span className="text-gray-500">No</span>
+                            <TableCell className="text-right">
+                              {voter.role !== 'admin' && voter.id !== user?.id && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteVoter(voter.id)}
+                                  className="ml-auto"
+                                  disabled={deleteVoterMutation.isPending}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               )}
                             </TableCell>
                           </TableRow>

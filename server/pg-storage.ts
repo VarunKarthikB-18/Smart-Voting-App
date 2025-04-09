@@ -59,6 +59,25 @@ export class PgStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
+  
+  async deleteUser(userId: number): Promise<void> {
+    // First check if the user has voted
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    // If user has voted, remove their vote first
+    if (user.hasVoted && user.votedFor) {
+      await db.delete(votes).where(and(
+        eq(votes.userId, userId),
+        eq(votes.candidateId, user.votedFor)
+      ));
+    }
+    
+    // Then delete the user
+    await db.delete(users).where(eq(users.id, userId));
+  }
 
   async updateUserVote(userId: number, candidateId: number): Promise<User> {
     const [updatedUser] = await db

@@ -100,7 +100,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasVoted: user.hasVoted,
         votedFor: user.votedFor,
         role: user.role,
-        faceRegistered: user.faceRegistered,
         createdAt: user.createdAt
       }));
       
@@ -108,6 +107,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching voters:", error);
       res.status(500).json({ message: "Failed to fetch voters" });
+    }
+  });
+  
+  // Delete a user (admin only)
+  app.delete("/api/admin/users/:id", ensureAuthenticated, ensureAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't allow deleting your own account or other admin accounts
+      if (userId === req.user!.id) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      if (user.role === 'admin' && req.user!.role === 'admin') {
+        return res.status(400).json({ message: "Cannot delete another admin account" });
+      }
+      
+      // Delete the user
+      await storage.deleteUser(userId);
+      
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
