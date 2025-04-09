@@ -35,11 +35,11 @@ export function CandidateCard({ candidate, onVote, hasVoted, votedForThisCandida
             size="lg"
           />
           <div className="ml-4">
-            <h3 className="text-lg font-semibold text-gray-800">{candidate.name}</h3>
-            <p className="text-sm text-gray-500">{candidate.party}</p>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{candidate.name}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-300">{candidate.party}</p>
           </div>
         </div>
-        <p className="text-gray-600 text-sm mb-5">{candidate.slogan}</p>
+        <p className="text-gray-600 dark:text-gray-200 text-sm mb-5">{candidate.slogan}</p>
         <Button
           variant={votedForThisCandidate ? "secondary" : "default"}
           className={cn(

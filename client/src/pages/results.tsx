@@ -8,10 +8,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function ResultsPage() {
-  // Fetch election results
+  // Fetch election results with automatic polling
   const { data: results, isLoading } = useQuery({
     queryKey: ['/api/results'],
-    queryFn: fetchResults
+    queryFn: fetchResults,
+    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
+    staleTime: 1000 // Consider data stale after 1 second
   });
   
   // Prepare data for chart
@@ -31,8 +33,8 @@ export default function ResultsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Election Results</h2>
-        <p className="text-gray-500">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Election Results</h2>
+        <p className="text-gray-500 dark:text-gray-300">
           Total votes: {isLoading 
             ? <Skeleton className="h-4 w-16 inline-block" /> 
             : <span>{results?.totalVotes.toLocaleString()}</span>
@@ -128,10 +130,10 @@ export default function ResultsPage() {
                       className="mr-4"
                     />
                     <div>
-                      <div className="text-xl font-bold mb-1">
+                      <div className="text-xl font-bold mb-1 dark:text-white">
                         {results.leadingCandidate.candidate.name}
                       </div>
-                      <div className="text-sm text-gray-500 mb-2">
+                      <div className="text-sm text-gray-500 dark:text-gray-300 mb-2">
                         {results.leadingCandidate.candidate.party}
                       </div>
                       <div className="text-sm font-medium text-primary">

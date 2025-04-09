@@ -28,12 +28,12 @@ export function ResultCard({ result }: ResultCardProps) {
             size="sm"
             className="mr-3"
           />
-          <div className="text-sm font-medium">{candidate.name}</div>
+          <div className="text-sm font-medium dark:text-white">{candidate.name}</div>
         </div>
-        <div className="text-lg font-bold">{percentage}%</div>
+        <div className="text-lg font-bold dark:text-white">{percentage}%</div>
       </div>
       <Progress value={percentage} className="h-2.5 mb-1" />
-      <div className="text-xs text-gray-500">{votes} votes</div>
+      <div className="text-xs text-gray-500 dark:text-gray-300">{votes} votes</div>
     </div>
   );
 }
