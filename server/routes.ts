@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // This assumes you've added a method to get all users
       const users = await storage.getAllUsers();
       
-      // Filter out sensitive information
+      // Filter out sensitive information but include all necessary details
       const voters = users.map((user: User) => ({
         id: user.id,
         name: user.name,
@@ -99,7 +99,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         hasVoted: user.hasVoted,
         votedFor: user.votedFor,
-        role: user.role
+        role: user.role,
+        faceRegistered: user.faceRegistered,
+        createdAt: user.createdAt
       }));
       
       res.json(voters);

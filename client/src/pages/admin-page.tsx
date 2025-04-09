@@ -52,6 +52,9 @@ interface VoterData {
   username: string;
   hasVoted: boolean;
   votedFor: number | null;
+  faceRegistered: boolean;
+  createdAt: string;
+  role: string;
 }
 
 export default function AdminPage() {
@@ -416,31 +419,61 @@ export default function AdminPage() {
                         <TableHead>Name</TableHead>
                         <TableHead>Username</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Voted</TableHead>
+                        <TableHead>Registration Time</TableHead>
+                        <TableHead>Voting Status</TableHead>
                         <TableHead>Voted For</TableHead>
+                        <TableHead>Face Registered</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {voters.map((voter) => {
                         const votedForCandidate = candidates.find(c => c.id === voter.votedFor);
+                        const registrationTime = new Date(voter.createdAt).toLocaleString();
                         
                         return (
-                          <TableRow key={voter.id}>
-                            <TableCell className="font-medium">{voter.name}</TableCell>
+                          <TableRow key={voter.id} className={voter.role === 'admin' ? 'bg-blue-50 dark:bg-blue-900/20' : ''}>
+                            <TableCell className="font-medium">
+                              {voter.name}
+                              {voter.role === 'admin' && (
+                                <span className="ml-2 px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                                  Admin
+                                </span>
+                              )}
+                            </TableCell>
                             <TableCell>{voter.username}</TableCell>
                             <TableCell>{voter.email}</TableCell>
+                            <TableCell>{registrationTime}</TableCell>
                             <TableCell>
                               {voter.hasVoted ? (
-                                <span className="inline-flex items-center text-green-600">
+                                <span className="inline-flex items-center text-green-600 dark:text-green-400">
                                   <UserCheck className="h-4 w-4 mr-1" />
-                                  Yes
+                                  Voted
                                 </span>
                               ) : (
-                                "No"
+                                <span className="text-amber-600 dark:text-amber-400">
+                                  Not voted yet
+                                </span>
                               )}
                             </TableCell>
                             <TableCell>
-                              {votedForCandidate ? votedForCandidate.name : "-"}
+                              {votedForCandidate ? (
+                                <div className="flex items-center space-x-2">
+                                  <Avatar 
+                                    src={votedForCandidate.avatarUrl} 
+                                    alt={votedForCandidate.name} 
+                                    fallback={votedForCandidate.name.charAt(0)}
+                                    size="sm"
+                                  />
+                                  <span>{votedForCandidate.name}</span>
+                                </div>
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {voter.faceRegistered ? (
+                                <span className="text-green-600 dark:text-green-400">Yes</span>
+                              ) : (
+                                <span className="text-gray-500">No</span>
+                              )}
                             </TableCell>
                           </TableRow>
                         );
