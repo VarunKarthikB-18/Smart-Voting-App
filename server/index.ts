@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from 'cookie-parser';
 import { initializeDatabase } from './db';
+import { initializeAdmin } from './admin-init';
 
 const app = express();
 app.use(express.json({ limit: '5mb' })); // Increased limit for face data
@@ -44,6 +45,9 @@ app.use((req, res, next) => {
     // Initialize database before setting up routes
     await initializeDatabase();
     console.log('Database initialized successfully');
+    
+    // Initialize the admin user
+    await initializeAdmin();
   } catch (error) {
     console.error('Failed to initialize database:', error);
   }

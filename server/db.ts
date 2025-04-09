@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import { users, candidates, votes, sessions } from "@shared/schema";
 
@@ -6,7 +7,7 @@ import { users, candidates, votes, sessions } from "@shared/schema";
 const client = postgres(process.env.DATABASE_URL!);
 export const db = drizzle(client, { schema: { users, candidates, votes, sessions } });
 
-// Initialize the database with default candidates if needed
+// Initialize the database with default candidates
 export async function initializeDatabase() {
   try {
     // Check if we have candidates
@@ -17,27 +18,27 @@ export async function initializeDatabase() {
       console.log('No candidates found, initializing with defaults...');
       const defaultCandidates = [
         {
-          name: "John Smith",
-          party: "Progressive Party",
-          slogan: "Building a Better Tomorrow",
+          name: "Rajesh Sharma",
+          party: "Bharatiya Janata Party",
+          slogan: "Building a Stronger India",
           avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg"
         },
         {
-          name: "Sarah Johnson",
-          party: "Liberty Alliance",
-          slogan: "Freedom and Prosperity for All",
+          name: "Priya Patel",
+          party: "Indian National Congress",
+          slogan: "Unity in Diversity",
           avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg"
         },
         {
-          name: "Michael Rodriguez",
-          party: "Unity Coalition",
-          slogan: "Together We Achieve More",
+          name: "Vikram Singh",
+          party: "Aam Aadmi Party",
+          slogan: "For the Common Man",
           avatarUrl: "https://randomuser.me/api/portraits/men/67.jpg"
         },
         {
-          name: "Emily Williams",
-          party: "Reform Movement",
-          slogan: "Real Change, Real Results",
+          name: "Ananya Desai",
+          party: "Bahujan Samaj Party",
+          slogan: "Social Justice for All",
           avatarUrl: "https://randomuser.me/api/portraits/women/29.jpg"
         },
       ];
