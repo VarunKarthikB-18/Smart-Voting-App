@@ -6,6 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import bcrypt from 'bcrypt';
 
 declare global {
   namespace Express {
@@ -25,29 +26,34 @@ async function hashPassword(password: string): Promise<string> {
 // Verify a password against a stored hashed password
 async function comparePasswords(plainPassword: string, hashedPassword: string): Promise<boolean> {
   try {
-    // Check if hashedPassword is in the correct format
-    if (!hashedPassword || !hashedPassword.includes(".")) {
-      console.log("Invalid hashed password format");
-      return false;
+    // Handle bcrypt passwords (starting with $2b$)
+    if (hashedPassword.startsWith('$2b$') || hashedPassword.startsWith('$2a$')) {
+      return await bcrypt.compare(plainPassword, hashedPassword);
     }
     
-    const [hashed, salt] = hashedPassword.split(".");
-    
-    if (!hashed || !salt) {
-      console.log("Missing hash or salt component");
-      return false;
+    // Handle our scrypt format
+    if (hashedPassword.includes(".")) {
+      const [hashed, salt] = hashedPassword.split(".");
+      
+      if (!hashed || !salt) {
+        console.log("Missing hash or salt component");
+        return false;
+      }
+      
+      const hashedBuf = Buffer.from(hashed, "hex");
+      const suppliedBuf = (await scryptAsync(plainPassword, salt, 64)) as Buffer;
+      
+      // Ensure both buffers have the same length before comparing
+      if (hashedBuf.length !== suppliedBuf.length) {
+        console.log("Buffer length mismatch:", hashedBuf.length, suppliedBuf.length);
+        return false;
+      }
+      
+      return timingSafeEqual(hashedBuf, suppliedBuf);
     }
     
-    const hashedBuf = Buffer.from(hashed, "hex");
-    const suppliedBuf = (await scryptAsync(plainPassword, salt, 64)) as Buffer;
-    
-    // Ensure both buffers have the same length before comparing
-    if (hashedBuf.length !== suppliedBuf.length) {
-      console.log("Buffer length mismatch:", hashedBuf.length, suppliedBuf.length);
-      return false;
-    }
-    
-    return timingSafeEqual(hashedBuf, suppliedBuf);
+    console.log("Unsupported password format");
+    return false;
   } catch (error) {
     console.error("Error in password comparison:", error);
     return false;
