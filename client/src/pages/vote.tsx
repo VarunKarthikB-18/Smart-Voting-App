@@ -85,7 +85,7 @@ export default function VotePage() {
   
   const handleFaceVerified = () => {
     // After face verification succeeds, cast the vote
-    if (selectedCandidateId !== null) {
+    if (selectedCandidateId !== null && !voteMutation.isPending) {
       voteMutation.mutate(selectedCandidateId);
       setShowFaceVerification(false);
     }

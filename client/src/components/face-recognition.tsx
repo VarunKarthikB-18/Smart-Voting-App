@@ -94,6 +94,8 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
     
     faceapi.matchDimensions(canvasRef.current, displaySize);
     
+    let verificationTriggered = false;
+    
     const intervalId = setInterval(async () => {
       // In a real app, this would use actual face detection:
       // const detections = await faceapi.detectAllFaces(
@@ -102,15 +104,21 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
       // ).withFaceLandmarks();
       
       // For this demo, we'll simulate face detection with a timer
-      setTimeout(() => {
-        setFaceDetected(true);
-        clearInterval(intervalId);
-        
-        // Auto-verify after 2 seconds of face detection
+      if (!verificationTriggered) {
         setTimeout(() => {
-          onFaceVerified();
-        }, 2000);
-      }, 3000);
+          setFaceDetected(true);
+          clearInterval(intervalId);
+          
+          // Auto-verify after 2 seconds of face detection
+          // Prevent multiple verification attempts
+          if (!verificationTriggered) {
+            verificationTriggered = true;
+            setTimeout(() => {
+              onFaceVerified();
+            }, 2000);
+          }
+        }, 3000);
+      }
     }, 100);
     
     return () => clearInterval(intervalId);
@@ -199,12 +207,12 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
                   disabled={!cameraPermission}
                   onClick={() => {
                     // For demo purposes, simulate face detection
+                    setFaceDetected(true);
+                    
+                    // Use a single timeout to prevent multiple calls
                     setTimeout(() => {
-                      setFaceDetected(true);
-                      setTimeout(() => {
-                        onFaceVerified();
-                      }, 2000);
-                    }, 1000);
+                      onFaceVerified();
+                    }, 2000);
                   }}
                 >
                   Skip Verification

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { CheckSquare, LogOut } from "lucide-react";
+import { CheckSquare, LogOut, Moon, Sun } from "lucide-react";
 import { Tab } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
 
 interface LayoutProps {
@@ -12,6 +13,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [location, setLocation] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const isAdmin = user?.role === "admin";
   
   const handleLogout = () => {
@@ -46,6 +48,15 @@ export function Layout({ children }: LayoutProps) {
                 <span className="mx-2">•</span>
                 <span>Voting ends on April 3, 2025</span>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="mr-2 rounded-full"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
               {user && (
                 <Button 
                   variant="outline" 
