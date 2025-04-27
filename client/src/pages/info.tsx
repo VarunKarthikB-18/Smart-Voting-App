@@ -12,7 +12,7 @@ export default function InfoPage() {
       
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Presidential Election 2025</CardTitle>
+          <CardTitle>Presidential Election {new Date().getFullYear()}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -25,11 +25,11 @@ export default function InfoPage() {
                 </div>
                 <div className="flex">
                   <dt className="w-36 text-sm text-gray-500">Start Date:</dt>
-                  <dd className="flex-1 text-sm">April 3, 2025 - 8:00 AM</dd>
+                  <dd className="flex-1 text-sm">{new Date().toLocaleDateString()} - 12:00 AM</dd>
                 </div>
                 <div className="flex">
                   <dt className="w-36 text-sm text-gray-500">End Date:</dt>
-                  <dd className="flex-1 text-sm">April 3, 2025 - 8:00 PM</dd>
+                  <dd className="flex-1 text-sm">{new Date().toLocaleDateString()} - 12:00 PM</dd>
                 </div>
                 <div className="flex">
                   <dt className="w-36 text-sm text-gray-500">Eligible Voters:</dt>
@@ -44,13 +44,12 @@ export default function InfoPage() {
             
             <div>
               <h4 className="font-medium text-gray-900 mb-2">Voting Rules</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                <li>One vote per registered voter</li>
-                <li>Facial recognition verification required</li>
-                <li>Votes cannot be changed after submission</li>
-                <li>Results are finalized after polls close</li>
-                <li>ID verification required at polling stations</li>
-                <li>Online and in-person voting available</li>
+              <ul className="list-disc list-inside space-y-2 text-sm text-gray-500">
+                <li>Each registered voter can cast one vote</li>
+                <li>Face verification is required for registration and voting</li>
+                <li>Voters must complete face registration before voting</li>
+                <li>Results are updated in real-time</li>
+                <li>Voting cannot be changed after submission</li>
               </ul>
             </div>
           </div>

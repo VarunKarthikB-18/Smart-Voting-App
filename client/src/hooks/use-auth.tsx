@@ -14,6 +14,7 @@ import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { clearVoteData } from "../lib/api";
 import { z } from "zod";
+import { useLocation } from "wouter";
 
 // Registration schema with password confirmation
 export const registerFormSchema = insertUserSchema.extend({
@@ -29,46 +30,86 @@ export const registerFormSchema = insertUserSchema.extend({
 // Registration form data type
 export type RegisterFormData = z.infer<typeof registerFormSchema>;
 
-export type AuthContextType = {
+interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginUser>;
-  logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegisterFormData>;
-};
+  logoutMutation: UseMutationResult<void, Error, void>;
+}
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [_, setLocation] = useLocation();
   
   const {
     data: user,
     error,
     isLoading,
-  } = useQuery<User | null, Error>({
+  } = useQuery<User | null>({
     queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: async ({ signal }) => {
+      console.log('Fetching user data...');
+      const data = await getQueryFn({ on401: "returnNull" })({ 
+        queryKey: ["/api/user"],
+        signal,
+        client: queryClient,
+        meta: undefined
+      });
+      console.log('User data received:', data);
+      return data as User | null;
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
-  const loginMutation = useMutation({
-    mutationFn: async (credentials: LoginUser) => {
+  const loginMutation = useMutation<User, Error, LoginUser>({
+    mutationFn: async (credentials) => {
+      console.log('Attempting login with:', credentials.username);
       const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      if (!res.ok) {
+        const error = await res.json();
+        console.error('Login response not ok:', error);
+        throw new Error(error.message || 'Login failed');
+      }
+      const userData = await res.json();
+      console.log('Login successful:', userData);
+      return userData;
     },
-    onSuccess: (user: User) => {
+    onSuccess: (user) => {
+      console.log('Login mutation success:', user);
       // Clear any previous voting data in localStorage
       clearVoteData();
       
       // Update global state
       queryClient.setQueryData(["/api/user"], user);
+      
+      // Show welcome message
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.name}!`,
       });
+
+      // Navigate based on user role
+      if (user.role === 'admin') {
+        setLocation('/admin');
+      } else if (user.faceRegistered) {
+        setLocation('/');
+      }
     },
-    onError: (error: Error) => {
+    onError: (error) => {
+      console.error('Login mutation error:', error);
       toast({
         title: "Login failed",
         description: error.message || "Invalid username or password",
@@ -118,6 +159,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged out",
         description: "You have been successfully logged out",
       });
+      
+      // Redirect to login page
+      setLocation('/auth');
     },
     onError: (error: Error) => {
       toast({
@@ -142,12 +186,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 }

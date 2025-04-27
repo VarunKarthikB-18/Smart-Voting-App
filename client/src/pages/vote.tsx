@@ -38,8 +38,9 @@ export default function VotePage() {
   
   // Cast vote mutation
   const voteMutation = useMutation({
-    mutationFn: (candidateId: number) => castVote(candidateId),
-    onSuccess: (data, candidateId) => {
+    mutationFn: async ({ candidateId, faceDescriptor }: { candidateId: number; faceDescriptor: Float32Array }) => 
+      castVote(candidateId, faceDescriptor),
+    onSuccess: (data, { candidateId }) => {
       // Update cache for both results and user data
       queryClient.invalidateQueries({ queryKey: ['/api/results'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -57,6 +58,35 @@ export default function VotePage() {
       }, 2000);
     },
     onError: (error: Error) => {
+      // Check if the error is due to face registration requirement
+      if (error.message.includes("Face registration required")) {
+        toast({
+          title: "Face Registration Required",
+          description: "You need to register your face before voting. Redirecting to face registration...",
+          variant: "default"
+        });
+        
+        // Store the selected candidate ID in session storage
+        sessionStorage.setItem('pendingVoteCandidate', selectedCandidateId?.toString() || '');
+        
+        // Redirect to face registration page
+        setTimeout(() => {
+          navigate('/register-face');
+        }, 2000);
+        return;
+      }
+
+      // Check if the error is due to face verification failure
+      if (error.message.includes("Face verification failed")) {
+        toast({
+          title: "Face Verification Failed",
+          description: "Your face could not be verified. Please try again.",
+          variant: "destructive"
+        });
+        setShowFaceVerification(false);
+        return;
+      }
+      
       setErrorMessage(error.message || "An error occurred while casting your vote.");
       setShowVoteError(true);
       setShowVoteSuccess(false);
@@ -76,17 +106,37 @@ export default function VotePage() {
       return;
     }
     
-    // Set the selected candidate id
     setSelectedCandidateId(candidateId);
+    
+    // Check if user has registered their face
+    if (!user?.faceRegistered) {
+      toast({
+        title: "Face Registration Required",
+        description: "You need to register your face before voting. Redirecting to face registration...",
+        variant: "default"
+      });
+      
+      // Store the selected candidate ID in session storage
+      sessionStorage.setItem('pendingVoteCandidate', candidateId.toString());
+      
+      // Redirect to face registration page
+      setTimeout(() => {
+        navigate('/register-face');
+      }, 2000);
+      return;
+    }
     
     // Show face verification
     setShowFaceVerification(true);
   };
   
-  const handleFaceVerified = () => {
+  const handleFaceVerified = (faceDescriptor: Float32Array) => {
     // After face verification succeeds, cast the vote
     if (selectedCandidateId !== null && !voteMutation.isPending) {
-      voteMutation.mutate(selectedCandidateId);
+      voteMutation.mutate({ 
+        candidateId: selectedCandidateId,
+        faceDescriptor
+      });
       setShowFaceVerification(false);
     }
   };

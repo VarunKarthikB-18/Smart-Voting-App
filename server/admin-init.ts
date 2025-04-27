@@ -1,6 +1,5 @@
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
-import { storage } from "./storage";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { users } from "@shared/schema";
@@ -19,7 +18,7 @@ export async function initializeAdmin() {
   try {
     console.log("Checking for admin user...");
     // Check if admin user exists
-    const adminUser = await db.select().from(users).where(eq(users.username, "admin"));
+    const adminUser = db.select().from(users).where(eq(users.username, "admin")).all();
     
     // If no admin exists, create one
     if (adminUser.length === 0) {
@@ -28,14 +27,16 @@ export async function initializeAdmin() {
       // Create admin user with hashed password
       const hashedPassword = await hashPassword("password123");
       
-      // Use the storage interface to create the user
-      await storage.createUser({
+      // Insert admin user directly into the database
+      db.insert(users).values({
         username: "admin",
         password: hashedPassword,
         name: "Administrator",
         email: "admin@votingsystem.com",
-        role: "admin"
-      });
+        role: "admin",
+        hasVoted: 0,
+        faceRegistered: 0,
+      }).run();
       
       console.log('Default admin user created successfully');
     } else {

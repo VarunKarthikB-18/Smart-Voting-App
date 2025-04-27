@@ -20,8 +20,11 @@ export async function fetchResults(): Promise<ElectionResults> {
 }
 
 // Cast a vote for a candidate
-export async function castVote(candidateId: number): Promise<{ message: string; results: ElectionResults }> {
-  const response = await apiRequest('POST', '/api/vote', { candidateId });
+export async function castVote(candidateId: number, faceDescriptor: Float32Array): Promise<{ message: string; results: ElectionResults }> {
+  const response = await apiRequest('POST', '/api/vote', { 
+    candidateId,
+    faceDescriptor: Array.from(faceDescriptor) // Convert Float32Array to regular array for JSON serialization
+  });
   return response.json();
 }
 

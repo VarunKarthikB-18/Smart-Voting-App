@@ -10,18 +10,34 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
+import { FaceRegistration } from "@/components/face-registration";
+import { toast } from "@/components/ui/use-toast";
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [showFaceRegistration, setShowFaceRegistration] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
   const [_, setLocation] = useLocation();
-  const { user, loginMutation, registerMutation, isLoading } = useAuth();
+  const { user, loginMutation, registerMutation } = useAuth();
 
-  // Redirect to home if user is already logged in
+  // Single useEffect to handle all auth-related redirects
   useEffect(() => {
-    if (user) {
+    if (!user) {
+      // If no user, reset face registration state
+      setShowFaceRegistration(false);
+      setRegistrationComplete(false);
+      return;
+    }
+
+    // If user is logged in and face is registered, go to home
+    if (user.faceRegistered) {
       setLocation("/");
     }
-  }, [user, setLocation]);
+    // Only show face registration after new registration, not during login
+    else if (activeTab === "register" && !showFaceRegistration && registrationComplete) {
+      setShowFaceRegistration(true);
+    }
+  }, [user, showFaceRegistration, activeTab, registrationComplete, setLocation]);
 
   // Login Form
   const loginForm = useForm<LoginUser>({
@@ -32,8 +48,13 @@ export default function AuthPage() {
     }
   });
 
-  const onLoginSubmit = (data: LoginUser) => {
-    loginMutation.mutate(data);
+  const onLoginSubmit = async (data: LoginUser) => {
+    try {
+      await loginMutation.mutateAsync(data);
+    } catch (error) {
+      // Error is already handled by the mutation
+      console.error('Login error:', error);
+    }
   };
 
   // Register Form
@@ -48,9 +69,57 @@ export default function AuthPage() {
     }
   });
 
-  const onRegisterSubmit = (data: RegisterFormData) => {
-    registerMutation.mutate(data);
+  const onRegisterSubmit = async (data: RegisterFormData) => {
+    try {
+      await registerMutation.mutateAsync(data);
+      setRegistrationComplete(true);
+      toast({
+        title: "Registration Successful",
+        description: "Please complete face registration to continue.",
+      });
+    } catch (error) {
+      // Error is already handled by the mutation
+      console.error('Registration error:', error);
+    }
   };
+
+  const handleFaceRegistrationComplete = () => {
+    toast({
+      title: "Face Registration Complete",
+      description: "You can now proceed to login and vote.",
+    });
+    setRegistrationComplete(true);
+    setLocation("/");
+  };
+
+  const handleFaceRegistrationCancel = () => {
+    toast({
+      title: "Face Registration Required",
+      description: "You must complete face registration to use the voting system.",
+      variant: "destructive"
+    });
+    // Stay on face registration
+  };
+
+  if (showFaceRegistration) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-6 bg-primary/5">
+        <div className="w-full max-w-md space-y-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2">Face Registration Required</h2>
+            <p className="text-gray-500">
+              Please complete face registration to ensure secure voting.
+              Your face will be verified each time you cast a vote.
+            </p>
+          </div>
+          <FaceRegistration
+            onRegistrationComplete={handleFaceRegistrationComplete}
+            onCancel={handleFaceRegistrationCancel}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -81,7 +150,11 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Username</FormLabel>
                             <FormControl>
-                              <Input placeholder="username" {...field} />
+                              <Input 
+                                placeholder="username" 
+                                {...field} 
+                                disabled={loginMutation.isPending}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -94,7 +167,12 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="••••••••" {...field} />
+                              <Input 
+                                type="password" 
+                                placeholder="••••••••" 
+                                {...field} 
+                                disabled={loginMutation.isPending}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -119,6 +197,7 @@ export default function AuthPage() {
                   <Button 
                     variant="ghost" 
                     onClick={() => setActiveTab("register")}
+                    disabled={loginMutation.isPending}
                   >
                     Don't have an account? Register
                   </Button>
@@ -144,7 +223,11 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Full Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="John Doe" {...field} />
+                              <Input 
+                                placeholder="John Doe" 
+                                {...field} 
+                                disabled={registerMutation.isPending}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -157,7 +240,12 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input type="email" placeholder="name@example.com" {...field} />
+                              <Input 
+                                type="email" 
+                                placeholder="name@example.com" 
+                                {...field} 
+                                disabled={registerMutation.isPending}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -170,7 +258,11 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Username</FormLabel>
                             <FormControl>
-                              <Input placeholder="johndoe" {...field} />
+                              <Input 
+                                placeholder="johndoe" 
+                                {...field} 
+                                disabled={registerMutation.isPending}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -183,7 +275,12 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="••••••••" {...field} />
+                              <Input 
+                                type="password" 
+                                placeholder="••••••••" 
+                                {...field} 
+                                disabled={registerMutation.isPending}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -196,7 +293,12 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Confirm Password</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="••••••••" {...field} />
+                              <Input 
+                                type="password" 
+                                placeholder="••••••••" 
+                                {...field} 
+                                disabled={registerMutation.isPending}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -221,6 +323,7 @@ export default function AuthPage() {
                   <Button 
                     variant="ghost" 
                     onClick={() => setActiveTab("login")}
+                    disabled={registerMutation.isPending}
                   >
                     Already have an account? Login
                   </Button>

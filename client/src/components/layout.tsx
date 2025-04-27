@@ -16,7 +16,7 @@ export function Layout({ children }: LayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const isAdmin = user?.role === "admin";
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
     logoutMutation.mutate();
     // Redirect to auth page after logout
     setLocation('/auth');
@@ -44,9 +44,11 @@ export function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex items-center">
               <div className="hidden md:flex items-center text-sm text-gray-500 mr-6">
-                <span>Presidential Election 2025</span>
+                <span>Presidential Election {new Date().getFullYear()}</span>
                 <span className="mx-2">•</span>
-                <span>Voting ends on April 3, 2025</span>
+                <span>Today: {new Date().toLocaleDateString()}</span>
+                <span className="mx-2">•</span>
+                <span>Voting ends today at 12:00 PM</span>
               </div>
               <Button
                 variant="ghost"

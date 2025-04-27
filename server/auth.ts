@@ -4,13 +4,17 @@ import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { db } from "./db";
+import { users, sessions } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import bcrypt from 'bcrypt';
+import Database from "better-sqlite3";
+import SQLiteStore from "better-sqlite3-session-store";
+import path from 'path';
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface User extends typeof users.$inferSelect {}
   }
 }
 
@@ -61,15 +65,29 @@ async function comparePasswords(plainPassword: string, hashedPassword: string): 
 }
 
 export function setupAuth(app: Express) {
+  // Set up SQLite session store with absolute path
+  const SQLiteStoreFactory = SQLiteStore(session);
+  const sessionDB = new Database(path.join(process.cwd(), "sessions.db"), {
+    verbose: console.log
+  });
+  
   // Session configuration
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "secure-voting-app-secret", // In production, use environment variable
+    secret: process.env.SESSION_SECRET || "secure-voting-app-secret",
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
+    store: new SQLiteStoreFactory({
+      client: sessionDB,
+      expired: {
+        clear: true,
+        intervalMs: 900000 //ms = 15min
+      }
+    }),
     cookie: {
-      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      secure: false, // Set to false for development
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax',
+      httpOnly: true
     },
   };
 
@@ -82,7 +100,7 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        const user = await storage.getUserByUsername(username);
+        const user = db.select().from(users).where(eq(users.username, username)).get();
         if (!user) {
           return done(null, false);
         }
@@ -111,7 +129,7 @@ export function setupAuth(app: Express) {
   // Deserialize user from the session
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const user = await storage.getUser(id);
+      const user = db.select().from(users).where(eq(users.id, id)).get();
       done(null, user);
     } catch (error) {
       done(error);
@@ -122,28 +140,28 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req, res, next) => {
     try {
       // Check if username already exists
-      const existingUser = await storage.getUserByUsername(req.body.username);
+      const existingUser = db.select().from(users).where(eq(users.username, req.body.username)).get();
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      // Check if email already exists if email uniqueness is required
-      if (storage.getUserByEmail) {
-        const existingEmail = await storage.getUserByEmail(req.body.email);
-        if (existingEmail) {
-          return res.status(400).json({ message: "Email already in use" });
-        }
+      // Check if email already exists
+      const existingEmail = db.select().from(users).where(eq(users.email, req.body.email)).get();
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already in use" });
       }
 
       // Create the user with a hashed password
-      const user = await storage.createUser({
+      const result = db.insert(users).values({
         ...req.body,
         password: await hashPassword(req.body.password),
-        hasVoted: false,
-        votedFor: null,
-        faceRegistered: false,
+        hasVoted: 0,
+        faceRegistered: 0,
         faceData: null,
-      });
+        role: 'voter'
+      }).run();
+
+      const user = db.select().from(users).where(eq(users.id, result.lastInsertRowid)).get();
 
       // Log the user in automatically after registration
       req.login(user, (err) => {

@@ -1,42 +1,43 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, blob } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  hasVoted: boolean("has_voted").default(false).notNull(),
+  hasVoted: integer("has_voted", { mode: "boolean" }).notNull().default(false),
   votedFor: integer("voted_for").references(() => candidates.id),
-  faceData: jsonb("face_data"),
-  faceRegistered: boolean("face_registered").default(false).notNull(),
-  role: text("role").default("voter").notNull(), // "voter" or "admin"
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  faceData: blob("face_data", { mode: "json" }),
+  faceRegistered: integer("face_registered", { mode: "boolean" }).notNull().default(false),
+  role: text("role").notNull().default("voter"), // "voter" or "admin"
+  createdAt: integer("created_at").notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
-export const candidates = pgTable("candidates", {
-  id: serial("id").primaryKey(),
+export const candidates = sqliteTable("candidates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   party: text("party").notNull(),
   slogan: text("slogan").notNull(),
   avatarUrl: text("avatar_url").notNull(),
 });
 
-export const votes = pgTable("votes", {
-  id: serial("id").primaryKey(),
+export const votes = sqliteTable("votes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   candidateId: integer("candidate_id").references(() => candidates.id).notNull(),
   userId: integer("user_id").references(() => users.id),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  timestamp: integer("timestamp").notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
-export const sessions = pgTable("sessions", {
-  id: serial("id").primaryKey(),
+export const sessions = sqliteTable("sessions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").references(() => users.id).notNull(),
   token: text("token").notNull().unique(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at").notNull()
+  createdAt: integer("created_at").notNull().default(sql`(strftime('%s', 'now'))`),
+  expiresAt: integer("expires_at").notNull()
 });
 
 export const registerUserSchema = z.object({

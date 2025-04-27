@@ -1,17 +1,25 @@
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 import { eq } from "drizzle-orm";
-import postgres from "postgres";
+import Database from "better-sqlite3";
 import { users, candidates, votes, sessions } from "@shared/schema";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
-// Create a database connection
-const client = postgres(process.env.DATABASE_URL!);
-export const db = drizzle(client, { schema: { users, candidates, votes, sessions } });
+// Create SQLite database connection
+const sqlite = new Database("sqlite.db");
+export const db = drizzle(sqlite);
 
 // Initialize the database with default candidates
 export async function initializeDatabase() {
   try {
+    // Run migrations
+    console.log('Running database migrations...');
+    const migration = readFileSync(resolve(process.cwd(), 'migrations/0000_initial.sql'), 'utf8');
+    sqlite.exec(migration);
+    console.log('Migrations completed successfully');
+
     // Check if we have candidates
-    const existingCandidates = await db.select().from(candidates);
+    const existingCandidates = db.select().from(candidates).all();
     
     // If no candidates exist, create default ones
     if (existingCandidates.length === 0) {
@@ -43,7 +51,7 @@ export async function initializeDatabase() {
         },
       ];
       
-      await db.insert(candidates).values(defaultCandidates);
+      db.insert(candidates).values(defaultCandidates).run();
       console.log('Default candidates created successfully');
     } else {
       console.log(`Found ${existingCandidates.length} existing candidates`);

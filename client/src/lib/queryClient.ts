@@ -1,9 +1,17 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const API_BASE_URL = 'http://localhost:3000';
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let errorMessage = res.statusText;
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      // If parsing JSON fails, use the status text
+    }
+    throw new Error(errorMessage);
   }
 }
 
@@ -12,13 +20,19 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const options: RequestInit = {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      'Accept': 'application/json',
+      ...(data ? { 'Content-Type': 'application/json' } : {})
+    },
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+    credentials: 'include',
+    mode: 'cors'
+  };
 
+  const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  const res = await fetch(fullUrl, options);
   await throwIfResNotOk(res);
   return res;
 }
@@ -29,8 +43,15 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
+    const url = queryKey[0] as string;
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+    
+    const res = await fetch(fullUrl, {
+      credentials: 'include',
+      mode: 'cors',
+      headers: {
+        'Accept': 'application/json'
+      }
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

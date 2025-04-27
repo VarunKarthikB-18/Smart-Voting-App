@@ -6,17 +6,17 @@ import { Loader2, Camera, CheckCircle2, XCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
-interface FaceRecognitionProps {
-  onFaceVerified: (faceDescriptor: Float32Array) => void;
+interface FaceRegistrationProps {
+  onRegistrationComplete: () => void;
   onCancel: () => void;
 }
 
-interface FaceVerificationResponse {
-  verified: boolean;
+interface FaceRegistrationResponse {
+  faceRegistered: boolean;
   message?: string;
 }
 
-export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionProps) {
+export function FaceRegistration({ onRegistrationComplete, onCancel }: FaceRegistrationProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,14 +24,14 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [cameraPermission, setCameraPermission] = useState(false);
   const [faceDetected, setFaceDetected] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const { toast } = useToast();
 
   // Load face-api models
   useEffect(() => {
     const loadModels = async () => {
       try {
-        // Use a specific version of the models known to work
+        console.log("Loading face detection models...");
         const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
         
         // Load models one by one with better error handling
@@ -112,12 +112,12 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
     }
   };
 
-  const verifyFace = async () => {
-    if (!videoRef.current || !canvasRef.current || isVerifying) return;
+  const registerFace = async () => {
+    if (!videoRef.current || !canvasRef.current || isRegistering) return;
     
-    setIsVerifying(true);
+    setIsRegistering(true);
     try {
-      console.log("Starting face verification...");
+      console.log("Starting face registration...");
       const detection = await faceapi.detectSingleFace(
         videoRef.current,
         new faceapi.TinyFaceDetectorOptions()
@@ -129,52 +129,62 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
           description: 'Please ensure your face is clearly visible.',
           variant: 'destructive'
         });
-        setIsVerifying(false);
+        setIsRegistering(false);
         return;
       }
 
       console.log("Face detected, descriptor length:", detection.descriptor.length);
       setFaceDetected(true);
 
-      // Convert descriptor to array and verify it's the correct format
-      const descriptorArray = detection.descriptor;
-      console.log("Descriptor array length:", descriptorArray.length);
-      console.log("Descriptor array is valid:", descriptorArray.length === 128);
+      const canvas = canvasRef.current;
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      
+      const context = canvas.getContext('2d');
+      if (!context) {
+        console.error("Failed to get canvas context");
+        return;
+      }
+      
+      context.drawImage(videoRef.current, 0, 0);
+      const imageData = canvas.toDataURL('image/jpeg');
 
+      // Send face data for registration
       try {
-        console.log("Sending verification request...");
-        const response = await apiRequest('POST', '/api/face/verify', {
-          faceDescriptor: Array.from(descriptorArray)
+        console.log("Sending registration request...");
+        const response = await apiRequest('POST', '/api/face/register', {
+          faceDescriptor: Array.from(detection.descriptor),
+          faceImage: imageData
         });
 
-        const result = await response.json() as FaceVerificationResponse;
-        console.log("Verification response:", result);
+        const result = await response.json() as FaceRegistrationResponse;
+        console.log("Registration response:", result);
 
-        if (result.verified) {
+        if (result.faceRegistered) {
           toast({
             title: 'Success',
-            description: 'Face verification successful.',
+            description: 'Face registration successful.',
           });
 
           // Stop the video stream
           const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
           tracks.forEach(track => track.stop());
 
-          // Call the completion handler with the face descriptor
-          onFaceVerified(descriptorArray);
+          // Call the completion handler
+          onRegistrationComplete();
         } else {
           toast({
-            title: 'Verification Failed',
-            description: result.message || 'Face verification failed. Please try again.',
+            title: 'Registration Failed',
+            description: result.message || 'Face registration failed. Please try again.',
             variant: 'destructive'
           });
           setFaceDetected(false);
         }
       } catch (error) {
-        console.error('Error verifying face:', error);
+        console.error('Error registering face:', error);
         toast({
           title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to verify face. Please try again.',
+          description: error instanceof Error ? error.message : 'Failed to register face. Please try again.',
           variant: 'destructive'
         });
         setFaceDetected(false);
@@ -188,7 +198,7 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
       });
       setFaceDetected(false);
     }
-    setIsVerifying(false);
+    setIsRegistering(false);
   };
 
   // Detect faces continuously when video is playing
@@ -199,7 +209,7 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
     let isDetecting = false;
     
     const detectFaces = async () => {
-      if (isDetecting || !videoRef.current || !canvasRef.current || faceDetected || isVerifying) {
+      if (isDetecting || !videoRef.current || !canvasRef.current || faceDetected || isRegistering) {
         animationFrameId = requestAnimationFrame(detectFaces);
         return;
       }
@@ -263,12 +273,12 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [modelsLoaded, cameraPermission, faceDetected, isVerifying]);
+  }, [modelsLoaded, cameraPermission, faceDetected, isRegistering]);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Face Verification</CardTitle>
+        <CardTitle>Face Registration</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading && (
@@ -304,7 +314,7 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                   <div className="bg-white p-4 rounded-md shadow-lg flex items-center">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mr-2" />
-                    <span>Face detected! Verifying...</span>
+                    <span>Face detected! Registering...</span>
                   </div>
                 </div>
               )}
@@ -319,9 +329,9 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
             
             <div className="text-center text-sm text-gray-500 mt-2">
               {!faceDetected ? (
-                <p>Please position your face in the frame for verification</p>
+                <p>Please position your face in the frame for registration</p>
               ) : (
-                <p>Face detected! Verifying your identity...</p>
+                <p>Face detected! Registering your face data...</p>
               )}
             </div>
             
@@ -329,25 +339,25 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
               <Button 
                 variant="outline" 
                 onClick={onCancel}
-                disabled={isVerifying}
+                disabled={isRegistering}
               >
                 Cancel
               </Button>
               
               <Button 
                 variant="default"
-                disabled={!cameraPermission || isVerifying}
-                onClick={verifyFace}
+                disabled={!cameraPermission || isRegistering}
+                onClick={registerFace}
               >
-                {isVerifying ? (
+                {isRegistering ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
+                    Registering...
                   </>
                 ) : (
                   <>
                     <Camera className="mr-2 h-4 w-4" />
-                    Verify Face
+                    Register Face
                   </>
                 )}
               </Button>
@@ -357,4 +367,4 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
       </CardContent>
     </Card>
   );
-}
+} 
