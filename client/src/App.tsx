@@ -9,6 +9,7 @@ import InfoPage from "@/pages/info";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import AdminPage from "@/pages/admin-page";
+import VerificationFailedPage from "@/pages/verification-failed";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -92,6 +93,16 @@ function Router() {
                 window.history.back();
               }}
             />
+          </Layout>
+        )} 
+      />
+
+      {/* Add the verification failed route */}
+      <ProtectedRoute 
+        path="/verification-failed" 
+        component={() => (
+          <Layout>
+            <VerificationFailedPage />
           </Layout>
         )} 
       />

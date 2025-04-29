@@ -9,6 +9,7 @@ import { fetchCandidates, castVote, hasVoted, markAsVoted, getVotedCandidate } f
 import { AlertCircleIcon, CheckCircleIcon, ScanFaceIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
+import VerificationFailedPage from './verification-failed';
 
 export default function VotePage() {
   const { toast } = useToast();
@@ -19,6 +20,8 @@ export default function VotePage() {
   const [errorMessage, setErrorMessage] = useState("An error occurred while casting your vote.");
   const [showFaceVerification, setShowFaceVerification] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
+  const [showVerificationFailed, setShowVerificationFailed] = useState(false);
+  const [verificationFailureMessage, setVerificationFailureMessage] = useState<string>('');
   
   // Get auth context for user data
   const { user } = useAuth();
@@ -144,8 +147,22 @@ export default function VotePage() {
   const handleCancelFaceVerification = () => {
     setShowFaceVerification(false);
     setSelectedCandidateId(null);
+    setVerificationFailureMessage('');
   };
   
+  const handleVerificationFailed = (message: string) => {
+    console.log("Face verification failed, redirecting to error page");
+    // Store the error message in session storage for the error page
+    sessionStorage.setItem('verificationError', message);
+    // Navigate to the verification failed page
+    navigate('/verification-failed');
+  };
+  
+  // If verification has failed, show the failure page
+  if (showVerificationFailed) {
+    return <VerificationFailedPage />;
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {showFaceVerification ? (
@@ -158,8 +175,17 @@ export default function VotePage() {
           </div>
           <FaceRecognition 
             onFaceVerified={handleFaceVerified} 
-            onCancel={handleCancelFaceVerification} 
+            onCancel={handleCancelFaceVerification}
+            onVerificationFailed={handleVerificationFailed}
           />
+          {verificationFailureMessage && (
+            <Alert className="mt-4 bg-red-50 border-red-200" variant="destructive">
+              <AlertCircleIcon className="h-4 w-4 text-red-600 mr-2" />
+              <AlertDescription className="text-red-800">
+                {verificationFailureMessage}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       ) : (
         <>

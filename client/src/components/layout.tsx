@@ -40,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <CheckSquare className="text-primary h-6 w-6 mr-2" />
-              <h1 className="text-xl font-bold text-gray-900">VoteEase</h1>
+              <h1 className="text-xl font-bold text-gray-900">FaceCast</h1>
             </div>
             <div className="flex items-center">
               <div className="hidden md:flex items-center text-sm text-gray-500 mr-6">
@@ -48,7 +48,7 @@ export function Layout({ children }: LayoutProps) {
                 <span className="mx-2">•</span>
                 <span>Today: {new Date().toLocaleDateString()}</span>
                 <span className="mx-2">•</span>
-                <span>Voting ends today at 12:00 PM</span>
+                <span>Voting Ends Today</span>
               </div>
               <Button
                 variant="ghost"
@@ -136,7 +136,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
             <div className="mb-4 md:mb-0">
-              <p>&copy; {new Date().getFullYear()} VoteEase. All rights reserved.</p>
+              <p>&copy; {new Date().getFullYear()} FaceCast. All rights reserved.</p>
             </div>
             <div className="flex space-x-6">
               <a href="#" className="hover:text-gray-900">Privacy Policy</a>

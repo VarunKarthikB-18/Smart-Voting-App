@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 interface FaceRecognitionProps {
   onFaceVerified: (faceDescriptor: Float32Array) => void;
   onCancel: () => void;
+  onVerificationFailed?: (message: string) => void;
 }
 
 interface FaceVerificationResponse {
@@ -16,7 +17,7 @@ interface FaceVerificationResponse {
   message?: string;
 }
 
-export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionProps) {
+export function FaceRecognition({ onFaceVerified, onCancel, onVerificationFailed }: FaceRecognitionProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,7 +26,62 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
   const [cameraPermission, setCameraPermission] = useState(false);
   const [faceDetected, setFaceDetected] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationFailed, setVerificationFailed] = useState(false);
+  const [failureMessage, setFailureMessage] = useState<string>('');
+  const timeoutRef = useRef<NodeJS.Timeout>();
   const { toast } = useToast();
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const resetVerificationState = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setVerificationFailed(false);
+    setFaceDetected(false);
+    setIsVerifying(false);
+    setFailureMessage('');
+  };
+
+  const handleVerificationFailure = (message: string) => {
+    console.log("Setting verification failed state with message:", message);
+    setVerificationFailed(true);
+    setFaceDetected(false);
+    setIsVerifying(false);
+    setFailureMessage(message);
+    
+    // Show toast after setting state
+    toast({
+      title: 'Failed to Verify',
+      description: message,
+      variant: 'destructive'
+    });
+    
+    // Notify parent component about verification failure
+    if (onVerificationFailed) {
+      onVerificationFailed(message);
+    }
+    
+    // Keep the failure state for longer
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      console.log("Resetting verification failed state");
+      resetVerificationState();
+      // Also notify parent about reset if needed
+      if (onVerificationFailed) {
+        onVerificationFailed('');
+      }
+    }, 5000);
+  };
 
   // Load face-api models
   useEffect(() => {
@@ -115,7 +171,9 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
   const verifyFace = async () => {
     if (!videoRef.current || !canvasRef.current || isVerifying) return;
     
+    resetVerificationState();
     setIsVerifying(true);
+    
     try {
       console.log("Starting face verification...");
       const detection = await faceapi.detectSingleFace(
@@ -124,19 +182,13 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
       ).withFaceLandmarks().withFaceDescriptor();
 
       if (!detection) {
-        toast({
-          title: 'No Face Detected',
-          description: 'Please ensure your face is clearly visible.',
-          variant: 'destructive'
-        });
-        setIsVerifying(false);
+        handleVerificationFailure('Please ensure your face is clearly visible.');
         return;
       }
 
       console.log("Face detected, descriptor length:", detection.descriptor.length);
       setFaceDetected(true);
 
-      // Convert descriptor to array and verify it's the correct format
       const descriptorArray = detection.descriptor;
       console.log("Descriptor array length:", descriptorArray.length);
       console.log("Descriptor array is valid:", descriptorArray.length === 128);
@@ -163,32 +215,16 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
           // Call the completion handler with the face descriptor
           onFaceVerified(descriptorArray);
         } else {
-          toast({
-            title: 'Verification Failed',
-            description: result.message || 'Face verification failed. Please try again.',
-            variant: 'destructive'
-          });
-          setFaceDetected(false);
+          handleVerificationFailure(result.message || 'Face verification failed. The face does not match the registered face.');
         }
       } catch (error) {
         console.error('Error verifying face:', error);
-        toast({
-          title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to verify face. Please try again.',
-          variant: 'destructive'
-        });
-        setFaceDetected(false);
+        handleVerificationFailure(error instanceof Error ? error.message : 'Face verification failed. Please try again.');
       }
     } catch (error) {
       console.error('Error capturing face:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to capture face. Please try again.',
-        variant: 'destructive'
-      });
-      setFaceDetected(false);
+      handleVerificationFailure(error instanceof Error ? error.message : 'Failed to capture face. Please try again.');
     }
-    setIsVerifying(false);
   };
 
   // Detect faces continuously when video is playing
@@ -199,7 +235,7 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
     let isDetecting = false;
     
     const detectFaces = async () => {
-      if (isDetecting || !videoRef.current || !canvasRef.current || faceDetected || isVerifying) {
+      if (isDetecting || !videoRef.current || !canvasRef.current || faceDetected || isVerifying || verificationFailed) {
         animationFrameId = requestAnimationFrame(detectFaces);
         return;
       }
@@ -263,31 +299,31 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [modelsLoaded, cameraPermission, faceDetected, isVerifying]);
+  }, [modelsLoaded, cameraPermission, faceDetected, isVerifying, verificationFailed]);
 
   return (
-    <Card>
+    <Card className="p-6">
       <CardHeader>
-        <CardTitle>Face Verification</CardTitle>
+        <CardTitle className="text-center">
+          {verificationFailed ? (
+            <div className="text-destructive flex items-center justify-center gap-2">
+              <XCircle className="h-6 w-6" />
+              Failed to Verify
+            </div>
+          ) : (
+            'Face Verification'
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading && (
-          <div className="flex items-center justify-center p-6">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <span className="ml-2">Loading face detection models...</span>
-          </div>
-        )}
-
-        {error && (
-          <div className="text-center text-red-500 p-6">
-            <XCircle className="h-8 w-8 mx-auto mb-2" />
-            <p>{error}</p>
-          </div>
-        )}
-        
-        {!isLoading && !error && (
-          <>
-            <div className="relative bg-gray-100 rounded-md overflow-hidden">
+        <div className="relative aspect-video mb-4 bg-muted rounded-lg overflow-hidden">
+          {isLoading ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading face detection...</span>
+            </div>
+          ) : (
+            <>
               <video
                 ref={videoRef}
                 autoPlay
@@ -295,65 +331,56 @@ export function FaceRecognition({ onFaceVerified, onCancel }: FaceRecognitionPro
                 muted
                 className="w-full h-full object-cover"
               />
-              <canvas 
-                ref={canvasRef} 
+              <canvas
+                ref={canvasRef}
                 className="absolute top-0 left-0 w-full h-full"
               />
-              
-              {faceDetected && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <div className="bg-white p-4 rounded-md shadow-lg flex items-center">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mr-2" />
-                    <span>Face detected! Verifying...</span>
+              {verificationFailed && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                  <div className="bg-destructive text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-2">
+                    <XCircle className="h-6 w-6" />
+                    <span className="text-lg font-semibold">Verification Failed</span>
                   </div>
                 </div>
               )}
-              
-              {!faceDetected && cameraPermission && (
-                <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm flex items-center">
-                  <Camera className="w-4 h-4 mr-1" />
-                  <span>Look at the camera</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="text-center text-sm text-gray-500 mt-2">
-              {!faceDetected ? (
-                <p>Please position your face in the frame for verification</p>
-              ) : (
-                <p>Face detected! Verifying your identity...</p>
-              )}
-            </div>
-            
-            <div className="flex justify-between mt-4">
-              <Button 
-                variant="outline" 
-                onClick={onCancel}
-                disabled={isVerifying}
-              >
-                Cancel
-              </Button>
-              
-              <Button 
-                variant="default"
-                disabled={!cameraPermission || isVerifying}
-                onClick={verifyFace}
-              >
-                {isVerifying ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  <>
-                    <Camera className="mr-2 h-4 w-4" />
-                    Verify Face
-                  </>
-                )}
-              </Button>
-            </div>
-          </>
+            </>
+          )}
+        </div>
+        
+        {verificationFailed && (
+          <div className="mb-4 p-4 bg-destructive/10 border border-destructive rounded-lg text-center text-destructive">
+            <p className="font-semibold">Face verification failed</p>
+            <p className="text-sm mt-1">{failureMessage}</p>
+          </div>
         )}
+
+        <div className="flex justify-between gap-4">
+          <Button
+            onClick={onCancel}
+            variant="secondary"
+            disabled={isVerifying}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={verifyFace}
+            disabled={isLoading || isVerifying || verificationFailed}
+            className="flex-1"
+          >
+            {isVerifying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              <>
+                <Camera className="mr-2 h-4 w-4" />
+                Verify Face
+              </>
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

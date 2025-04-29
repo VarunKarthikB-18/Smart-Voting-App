@@ -457,7 +457,7 @@ export default function AdminPage() {
                     <TableBody>
                       {voters.map((voter) => {
                         const votedForCandidate = candidates.find(c => c.id === voter.votedFor);
-                        const registrationTime = new Date(parseInt(voter.createdAt)).toLocaleString();
+                        const registrationTime = new Date(parseInt(voter.createdAt) * 1000).toLocaleString();
                         
                         return (
                           <TableRow key={voter.id} className={voter.role === 'admin' ? 'bg-blue-50 dark:bg-blue-900/20' : ''}>
