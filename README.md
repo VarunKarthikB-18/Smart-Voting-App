@@ -52,13 +52,6 @@ python app.py
 http://localhost:3000
 ```
 
-## Screenshots 📸
-(Insert screenshots here once the app is running)
-
-| Voter Login | Admin Dashboard | Vote Tracking |
-| :---------: | :--------------: | :------------: |
-| *(Screenshot)* | *(Screenshot)* | *(Screenshot)* |
-
 ## Folder Structure 📁
 ```
 Smart-Voting-App/
